@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Canadian UPC URL Generator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -12,19 +13,26 @@
       margin: 0;
       padding: 0;
     }
-    .container {
-      max-width: 800px;
-      margin: 40px auto;
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: 250px;
+      background-color: #e8f0ff;
       padding: 20px;
+      border-right: 1px solid #ccc;
+    }
+    .container {
+      flex: 1;
+      padding: 40px;
       background: white;
-      border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.1);
     }
     h1 {
       text-align: center;
       color: #003366;
     }
-    textarea, select, input[type="checkbox"] {
+    textarea, input[type="file"] {
       width: 100%;
       padding: 10px;
       margin: 10px 0 20px;
@@ -74,83 +82,98 @@
       padding: 10px;
       border-radius: 5px;
     }
+    .drop-zone {
+      border: 2px dashed #003366;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 20px;
+      color: #666;
+      background-color: #f0f8ff;
+    }
+    .drop-zone.dragover {
+      background-color: #d0e8ff;
+      color: #000;
+    }
+    @media (max-width: 768px) {
+      .layout {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #ccc;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Canadian UPC URL Generator</h1>
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>Tools</h2>
+      <p><strong>UPC Count:</strong> <span id="upcCount">0</span></p>
+      <h3>Recent UPCs</h3>
+      <ul id="recentUPCs" style="font-size: 14px; list-style: disc; padding-left: 20px;"></ul>
+      <h3>Tips</h3>
+      <ul style="font-size: 13px; padding-left: 20px;">
+        <li>Paste or upload Excel files</li>
+        <li>Drag & drop supported</li>
+        <li>Export up to 85,000+ URLs</li>
+      </ul>
+    </aside>
 
-    <label for="productList">Enter UPCs (one per line):</label>
-    <textarea id="productList" rows="10" placeholder="e.g.&#10;711753&#10;036000291452"></textarea>
+    <div class="container">
+      <h1>Canadian UPC URL Generator</h1>
 
-    <label>Select Stores:</label>
-    <label><input type="checkbox" class="storeCheckbox" value="homeDepotCa" checked> Home Depot Canada</label><br>
-    <label><input type="checkbox" class="storeCheckbox" value="homeHardware" checked> Home Hardware</label><br>
+      <label for="productList">Enter or paste UPCs (one per line):</label>
+      <textarea id="productList" rows="10" placeholder="e.g.&#10;711753&#10;036000291452" oninput="updateSidebarInfo()"></textarea>
 
-    <button onclick="generateURLs()">Generate URLs</button>
-    <button class="danger" onclick="clearHistory()">Clear History</button>
-    <button onclick="copyURLsToClipboard()">Copy All URLs</button>
-    <button onclick="exportCSV()">Export as CSV</button>
+      <div class="drop-zone" id="dropZone">
+        Drag & drop an Excel file here or <input type="file" id="fileInput" accept=".xlsx,.xls" />
+      </div>
 
-    <div id="resultsContainer"></div>
+      <button onclick="generateURLs()">Generate URLs</button>
+      <button class="danger" onclick="clearHistory()">Clear History</button>
+      <button onclick="copyURLsToClipboard()">Copy All URLs</button>
+      <button onclick="exportCSV()">Export as CSV</button>
 
-    <div id="historySection">
-      <h2>History</h2>
-      <div id="historyContent"></div>
+      <div id="resultsContainer"></div>
+
+      <div id="historySection">
+        <h2>History</h2>
+        <div id="historyContent"></div>
+      </div>
     </div>
   </div>
 
   <script>
     function generateURLs() {
       const productList = document.getElementById("productList").value.trim().split(/\r?\n/).filter(Boolean);
-      const storeCheckboxes = document.querySelectorAll(".storeCheckbox:checked");
-      const selectedStores = Array.from(storeCheckboxes).map(cb => cb.value);
-
       if (productList.length === 0) {
         alert("Please enter at least one UPC.");
         return;
       }
-      if (selectedStores.length === 0) {
-        alert("Please select at least one store.");
-        return;
-      }
 
-      let resultHTML = `<table><thead><tr><th>UPC</th>`;
-      selectedStores.forEach(store => {
-        resultHTML += `<th>${store === "homeDepotCa" ? "Home Depot Canada" : "Home Hardware"}</th>`;
-      });
-      resultHTML += `</tr></thead><tbody>`;
-
+      let resultHTML = `<table><thead><tr><th>UPC</th><th>Home Depot Canada</th></tr></thead><tbody>`;
       const timestamp = new Date().toLocaleString();
       const historyEntry = {
         timestamp,
         productList,
-        selectedStores,
+        selectedStores: ["homeDepotCa"],
         results: [],
         allUrls: []
       };
 
       productList.forEach(input => {
-        const row = { input, urls: {} };
-        resultHTML += `<tr><td>${input}</td>`;
-        selectedStores.forEach(store => {
-          let url = "";
-          if (store === "homeDepotCa") {
-            url = `https://www.homedepot.ca/search?q=${input}`;
-          } else if (store === "homeHardware") {
-            url = `https://www.homehardware.ca/en/search?q=${input}`;
-          }
-
-          row.urls[store] = url;
-          historyEntry.allUrls.push(url);
-          resultHTML += `<td><a href="${url}" target="_blank">Link</a></td>`;
-        });
-        resultHTML += `</tr>`;
-        historyEntry.results.push(row);
+        const url = `https://www.homedepot.ca/search?q=${input}`;
+        historyEntry.allUrls.push(url);
+        historyEntry.results.push({ input, urls: { homeDepotCa: url } });
+        resultHTML += `<tr><td>${input}</td><td><a href="${url}" target="_blank">Link</a></td></tr>`;
       });
 
       resultHTML += `</tbody></table>`;
       document.getElementById("resultsContainer").innerHTML = resultHTML;
+      updateSidebarInfo();
       saveToHistory(historyEntry);
     }
 
@@ -164,7 +187,6 @@
     function displayHistory() {
       const container = document.getElementById("historyContent");
       const history = JSON.parse(localStorage.getItem("urlGenHistory") || "[]");
-
       if (history.length === 0) {
         container.innerHTML = "<p>No history yet.</p>";
         return;
@@ -174,12 +196,7 @@
       history.forEach(entry => {
         let html = `<div class="history-entry"><strong>${entry.timestamp}</strong><br><ul style="padding-left:20px">`;
         entry.results.forEach(item => {
-          html += `<li>${item.input}: `;
-          entry.selectedStores.forEach(store => {
-            const url = item.urls[store];
-            html += `<a href="${url}" target="_blank">${store}</a> `;
-          });
-          html += `</li>`;
+          html += `<li>${item.input}: <a href="${item.urls.homeDepotCa}" target="_blank">Home Depot Canada</a></li>`;
         });
         html += `</ul></div>`;
         container.innerHTML += html;
@@ -213,12 +230,67 @@
         return;
       }
       const latest = history[0];
-      const csvContent = latest.allUrls.join('\n');
+      const csvContent = latest.allUrls.join('\r\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = "generated_urls.csv";
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+    }
+
+    function updateSidebarInfo() {
+      const upcs = document.getElementById("productList").value.trim().split(/\r?\n/).filter(Boolean);
+      document.getElementById("upcCount").textContent = upcs.length;
+
+      const recent = upcs.slice(0, 5);
+      const recentList = document.getElementById("recentUPCs");
+      recentList.innerHTML = "";
+      recent.forEach(upc => {
+        const li = document.createElement("li");
+        li.textContent = upc;
+        recentList.appendChild(li);
+      });
+    }
+
+    // Drag & drop + file input support
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("fileInput");
+
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+      const file = e.dataTransfer.files[0];
+      if (file) readExcel(file);
+    });
+
+    fileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) readExcel(file);
+    });
+
+    function readExcel(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const upcs = XLSX.utils.sheet_to_json(sheet, { header: 1 }).map(row => row[0]).filter(Boolean);
+        const textarea = document.getElementById("productList");
+        textarea.value = upcs.join('\n');
+        updateSidebarInfo();
+      };
+      reader.readAsArrayBuffer(file);
     }
 
     displayHistory();
