@@ -1,0 +1,122 @@
+<body>
+  <div class="container">
+    <h1>Canadian UPC URL Generator</h1>
+
+    <label for="productList">Enter UPCs (one per line):</label>
+    <textarea id="productList" rows="10" placeholder="e.g.&#10;711753&#10;036000291452"></textarea>
+
+    <label>Select Stores:</label>
+    <label><input type="checkbox" class="storeCheckbox" value="homeDepotCa" checked> Home Depot Canada</label><br>
+    <label><input type="checkbox" class="storeCheckbox" value="rona"> RONA</label><br>
+    <label><input type="checkbox" class="storeCheckbox" value="homeHardware"> Home Hardware</label><br>
+
+    <button onclick="generateURLs()">Generate URLs</button>
+    <button onclick="clearHistory()" style="background:#b30000; margin-top:10px;">Clear History</button>
+
+    <div id="resultsContainer"></div>
+
+    <div id="historySection">
+      <h2>History</h2>
+      <div id="historyContent"></div>
+    </div>
+  </div>
+
+  <script>
+    function generateURLs() {
+      const productList = document.getElementById("productList").value.trim().split(/\r?\n/).filter(Boolean);
+      const storeCheckboxes = document.querySelectorAll(".storeCheckbox:checked");
+      const selectedStores = Array.from(storeCheckboxes).map(cb => cb.value);
+
+      if (productList.length === 0) {
+        alert("Please enter at least one UPC.");
+        return;
+      }
+      if (selectedStores.length === 0) {
+        alert("Please select at least one store.");
+        return;
+      }
+
+      let resultHTML = `<table><thead><tr><th>UPC</th>`;
+      selectedStores.forEach(store => {
+        resultHTML += `<th>${store.replace("homeDepotCa", "Home Depot Canada")
+                                  .replace("rona", "RONA")
+                                  .replace("homeHardware", "Home Hardware")}</th>`;
+      });
+      resultHTML += `</tr></thead><tbody>`;
+
+      const timestamp = new Date().toLocaleString();
+      const historyEntry = {
+        timestamp,
+        productList,
+        selectedStores,
+        results: []
+      };
+
+      productList.forEach(input => {
+        const row = { input, urls: {} };
+        resultHTML += `<tr><td>${input}</td>`;
+        selectedStores.forEach(store => {
+          let url = "";
+          if (store === "homeDepotCa") {
+            url = `https://www.homedepot.ca/search?q=${input}`;
+          } else if (store === "rona") {
+            url = `https://www.rona.ca/en/search?searchTerm=${input}`;
+          } else if (store === "homeHardware") {
+            url = `https://www.homehardware.ca/en/search?q=${input}`;
+          }
+
+          row.urls[store] = url;
+          resultHTML += `<td><a href="${url}" target="_blank">Link</a></td>`;
+        });
+        resultHTML += `</tr>`;
+        historyEntry.results.push(row);
+      });
+
+      resultHTML += `</tbody></table>`;
+      document.getElementById("resultsContainer").innerHTML = resultHTML;
+
+      saveToHistory(historyEntry);
+    }
+
+    function saveToHistory(entry) {
+      let history = JSON.parse(localStorage.getItem("urlGenHistory") || "[]");
+      history.unshift(entry);
+      localStorage.setItem("urlGenHistory", JSON.stringify(history));
+      displayHistory();
+    }
+
+    function displayHistory() {
+      const container = document.getElementById("historyContent");
+      const history = JSON.parse(localStorage.getItem("urlGenHistory") || "[]");
+
+      if (history.length === 0) {
+        container.innerHTML = "<p>No history yet.</p>";
+        return;
+      }
+
+      container.innerHTML = "";
+      history.forEach(entry => {
+        let html = `<div class="history-entry"><strong>${entry.timestamp}</strong><br><ul>`;
+        entry.results.forEach(item => {
+          html += `<li>${item.input}: `;
+          entry.selectedStores.forEach(store => {
+            const url = item.urls[store];
+            html += `<a href="${url}" target="_blank">${store}</a> `;
+          });
+          html += `</li>`;
+        });
+        html += `</ul></div>`;
+        container.innerHTML += html;
+      });
+    }
+
+    function clearHistory() {
+      if (confirm("Are you sure you want to clear all history?")) {
+        localStorage.removeItem("urlGenHistory");
+        displayHistory();
+      }
+    }
+
+    displayHistory();
+  </script>
+</body>
