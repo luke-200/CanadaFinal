@@ -4,123 +4,75 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Canadian UPC URL Generator</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet"/>
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
     body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9f9f9;
+      color: #333;
       margin: 0;
       padding: 0;
-      font-family: 'Roboto', sans-serif;
-      background: linear-gradient(to right, #ffffff, #e6f0ff);
-      color: #222;
     }
-
     .container {
-      max-width: 900px;
+      max-width: 800px;
       margin: 40px auto;
-      background: #fff;
-      border-radius: 16px;
-      padding: 30px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
     }
-
     h1 {
       text-align: center;
-      color: #b30000;
-      font-size: 32px;
-      margin-bottom: 20px;
-    }
-
-    label {
-      font-weight: 700;
-      display: block;
-      margin-top: 20px;
       color: #003366;
     }
-
-    textarea {
+    textarea, select, input[type="checkbox"] {
       width: 100%;
-      padding: 12px;
-      font-size: 16px;
+      padding: 10px;
+      margin: 10px 0 20px;
       border: 1px solid #ccc;
-      border-radius: 10px;
-      margin-top: 8px;
-      resize: vertical;
-    }
-
-    input[type="checkbox"] {
-      margin-right: 8px;
-    }
-
-    button {
-      background-color: #005fa3;
-      color: white;
-      padding: 12px 20px;
-      margin-top: 20px;
-      margin-right: 10px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
+      border-radius: 6px;
       font-size: 16px;
-      font-weight: bold;
-      transition: 0.3s;
     }
-
+    button {
+      background-color: #003366;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      margin-right: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
     button:hover {
-      background-color: #003f7f;
+      background-color: #0055a5;
     }
-
-    #resultsContainer table {
+    .danger {
+      background-color: #b30000;
+    }
+    table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 25px;
-      font-size: 15px;
+      margin-top: 20px;
     }
-
     th, td {
-      padding: 12px;
-      border: 1px solid #ccc;
-      text-align: center;
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
     }
-
     th {
-      background-color: #0077cc;
+      background-color: #003366;
       color: white;
     }
-
     td a {
-      color: #b30000;
-      text-decoration: underline;
+      color: #003366;
+      text-decoration: none;
     }
-
     #historySection {
-      margin-top: 50px;
+      margin-top: 40px;
     }
-
     .history-entry {
-      background: #f5faff;
-      padding: 15px;
-      border-left: 5px solid #005fa3;
-      margin-top: 10px;
+      background: #f0f0f0;
+      margin-bottom: 10px;
+      padding: 10px;
       border-radius: 5px;
-    }
-
-    @media (max-width: 600px) {
-      .container {
-        padding: 20px;
-      }
-
-      h1 {
-        font-size: 24px;
-      }
-
-      button {
-        width: 100%;
-        margin-bottom: 10px;
-      }
     }
   </style>
 </head>
@@ -129,15 +81,16 @@
     <h1>Canadian UPC URL Generator</h1>
 
     <label for="productList">Enter UPCs (one per line):</label>
-    <textarea id="productList" rows="8" placeholder="e.g.&#10;711753&#10;036000291452"></textarea>
+    <textarea id="productList" rows="10" placeholder="e.g.&#10;711753&#10;036000291452"></textarea>
 
     <label>Select Stores:</label>
     <label><input type="checkbox" class="storeCheckbox" value="homeDepotCa" checked> Home Depot Canada</label><br>
-    <label><input type="checkbox" class="storeCheckbox" value="rona"> RONA</label><br>
-    <label><input type="checkbox" class="storeCheckbox" value="homeHardware"> Home Hardware</label><br>
+    <label><input type="checkbox" class="storeCheckbox" value="homeHardware" checked> Home Hardware</label><br>
 
     <button onclick="generateURLs()">Generate URLs</button>
-    <button onclick="clearHistory()" style="background:#b30000;">Clear History</button>
+    <button class="danger" onclick="clearHistory()">Clear History</button>
+    <button onclick="copyURLsToClipboard()">Copy All URLs</button>
+    <button onclick="exportCSV()">Export as CSV</button>
 
     <div id="resultsContainer"></div>
 
@@ -164,9 +117,7 @@
 
       let resultHTML = `<table><thead><tr><th>UPC</th>`;
       selectedStores.forEach(store => {
-        resultHTML += `<th>${store.replace("homeDepotCa", "Home Depot Canada")
-                                    .replace("rona", "RONA")
-                                    .replace("homeHardware", "Home Hardware")}</th>`;
+        resultHTML += `<th>${store === "homeDepotCa" ? "Home Depot Canada" : "Home Hardware"}</th>`;
       });
       resultHTML += `</tr></thead><tbody>`;
 
@@ -175,7 +126,8 @@
         timestamp,
         productList,
         selectedStores,
-        results: []
+        results: [],
+        allUrls: []
       };
 
       productList.forEach(input => {
@@ -185,13 +137,12 @@
           let url = "";
           if (store === "homeDepotCa") {
             url = `https://www.homedepot.ca/search?q=${input}`;
-          } else if (store === "rona") {
-            url = `https://www.rona.ca/en/search?query=${input}`;
           } else if (store === "homeHardware") {
-            url = `https://www.homehardware.ca/en/search/results?term=${input}`;
+            url = `https://www.homehardware.ca/en/search?q=${input}`;
           }
 
           row.urls[store] = url;
+          historyEntry.allUrls.push(url);
           resultHTML += `<td><a href="${url}" target="_blank">Link</a></td>`;
         });
         resultHTML += `</tr>`;
@@ -200,7 +151,6 @@
 
       resultHTML += `</tbody></table>`;
       document.getElementById("resultsContainer").innerHTML = resultHTML;
-
       saveToHistory(historyEntry);
     }
 
@@ -222,7 +172,7 @@
 
       container.innerHTML = "";
       history.forEach(entry => {
-        let html = `<div class="history-entry"><strong>${entry.timestamp}</strong><br><ul>`;
+        let html = `<div class="history-entry"><strong>${entry.timestamp}</strong><br><ul style="padding-left:20px">`;
         entry.results.forEach(item => {
           html += `<li>${item.input}: `;
           entry.selectedStores.forEach(store => {
@@ -241,6 +191,34 @@
         localStorage.removeItem("urlGenHistory");
         displayHistory();
       }
+    }
+
+    function copyURLsToClipboard() {
+      const history = JSON.parse(localStorage.getItem("urlGenHistory") || "[]");
+      if (history.length === 0) {
+        alert("No URLs to copy yet.");
+        return;
+      }
+      const latest = history[0];
+      const textToCopy = latest.allUrls.join('\n');
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        alert("URLs copied to clipboard!");
+      });
+    }
+
+    function exportCSV() {
+      const history = JSON.parse(localStorage.getItem("urlGenHistory") || "[]");
+      if (history.length === 0) {
+        alert("No URLs to export yet.");
+        return;
+      }
+      const latest = history[0];
+      const csvContent = latest.allUrls.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "generated_urls.csv";
+      link.click();
     }
 
     displayHistory();
