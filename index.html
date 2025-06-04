@@ -1,9 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Canadian UPC URL Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Roboto', sans-serif;
+      background: linear-gradient(to right, #ffffff, #e6f0ff);
+      color: #222;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      text-align: center;
+      color: #b30000;
+      font-size: 32px;
+      margin-bottom: 20px;
+    }
+
+    label {
+      font-weight: 700;
+      display: block;
+      margin-top: 20px;
+      color: #003366;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      margin-top: 8px;
+      resize: vertical;
+    }
+
+    input[type="checkbox"] {
+      margin-right: 8px;
+    }
+
+    button {
+      background-color: #005fa3;
+      color: white;
+      padding: 12px 20px;
+      margin-top: 20px;
+      margin-right: 10px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background-color: #003f7f;
+    }
+
+    #resultsContainer table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 25px;
+      font-size: 15px;
+    }
+
+    th, td {
+      padding: 12px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+
+    th {
+      background-color: #0077cc;
+      color: white;
+    }
+
+    td a {
+      color: #b30000;
+      text-decoration: underline;
+    }
+
+    #historySection {
+      margin-top: 50px;
+    }
+
+    .history-entry {
+      background: #f5faff;
+      padding: 15px;
+      border-left: 5px solid #005fa3;
+      margin-top: 10px;
+      border-radius: 5px;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      button {
+        width: 100%;
+        margin-bottom: 10px;
+      }
+    }
+  </style>
+</head>
 <body>
   <div class="container">
     <h1>Canadian UPC URL Generator</h1>
 
     <label for="productList">Enter UPCs (one per line):</label>
-    <textarea id="productList" rows="10" placeholder="e.g.&#10;711753&#10;036000291452"></textarea>
+    <textarea id="productList" rows="8" placeholder="e.g.&#10;711753&#10;036000291452"></textarea>
 
     <label>Select Stores:</label>
     <label><input type="checkbox" class="storeCheckbox" value="homeDepotCa" checked> Home Depot Canada</label><br>
@@ -11,7 +137,7 @@
     <label><input type="checkbox" class="storeCheckbox" value="homeHardware"> Home Hardware</label><br>
 
     <button onclick="generateURLs()">Generate URLs</button>
-    <button onclick="clearHistory()" style="background:#b30000; margin-top:10px;">Clear History</button>
+    <button onclick="clearHistory()" style="background:#b30000;">Clear History</button>
 
     <div id="resultsContainer"></div>
 
@@ -39,8 +165,8 @@
       let resultHTML = `<table><thead><tr><th>UPC</th>`;
       selectedStores.forEach(store => {
         resultHTML += `<th>${store.replace("homeDepotCa", "Home Depot Canada")
-                                  .replace("rona", "RONA")
-                                  .replace("homeHardware", "Home Hardware")}</th>`;
+                                    .replace("rona", "RONA")
+                                    .replace("homeHardware", "Home Hardware")}</th>`;
       });
       resultHTML += `</tr></thead><tbody>`;
 
@@ -60,9 +186,9 @@
           if (store === "homeDepotCa") {
             url = `https://www.homedepot.ca/search?q=${input}`;
           } else if (store === "rona") {
-            url = `https://www.rona.ca/en/search?searchTerm=${input}`;
+            url = `https://www.rona.ca/en/search?query=${input}`;
           } else if (store === "homeHardware") {
-            url = `https://www.homehardware.ca/en/search?q=${input}`;
+            url = `https://www.homehardware.ca/en/search/results?term=${input}`;
           }
 
           row.urls[store] = url;
@@ -120,3 +246,4 @@
     displayHistory();
   </script>
 </body>
+</html>
